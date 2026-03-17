@@ -26,7 +26,7 @@ const char blockSize = 8;
 const char minPaddingLength = 4;
 
 const char *supportedKexAlgosList[10] = {
-	"diffie-hellman-group14-sha1", // Kex Algorithms
+	"diffie-hellman-group14-sha256", // Kex Algorithms
 	"rsa-sha2-256", // Server Host Key Algorithms
 	"aes128-ctr", // Encryption Algorithms Client to Server
 	"aes128-ctr", // Encryption Algorithms Server to Client
@@ -182,26 +182,26 @@ Payload* ParseKexInitPayload(const unsigned char* payload, uint32_t payloadLengt
 
 			//TODO Go through the received list of supported algos and find the first match with our supported list
 
-			//for (int i = 0; i < listLength; i++) {
-			//	if (payload[index + i] == 44)
-			//	{
-			//		printf("\n");
-			//		puts(supportedKexAlgosList[list]);
-			//		puts(buffer);
-			//		printf("\n");
+			for (int i = 0; i < listLength; i++) {
+				//if (payload[index + i] == 44)
+				//{
+				//	printf("\n");
+				//	puts(supportedKexAlgosList[list]);
+				//	puts(buffer);
+				//	printf("\n");
 
-			//		if (supportedKexAlgosList[list] == buffer)
-			//		{
-			//			printf("BINGO\n");
-			//			memcpy(chosenAlgoList[list], buffer, listLength);
-			//		}
-			//	}
+				//	if (supportedKexAlgosList[list] == buffer)
+				//	{
+				//		printf("BINGO\n");
+				//		memcpy(chosenAlgoList[list], buffer, listLength);
+				//	}
+				//}
 
-			//	buffer[i] = payload[index + i];
-			//	putchar(payload[index + i]);
-			//}
+				//buffer[i] = payload[index + i];
+				putchar(payload[index + i]);
+			}
 
-			//printf("\n");
+			printf("\n");
 		}
 
 		index += listLength;
@@ -289,6 +289,17 @@ char CalculatePaddingLength(int payloadLength) {
 	return paddingLength;
 }
 
+void ParseKexDhInitPayload(char* payload, int payloadLength) {
+	uint32_t mpintLength =
+		((uint32_t)(unsigned char)payload[0] << 24) |
+		((uint32_t)(unsigned char)payload[1] << 16) |
+		((uint32_t)(unsigned char)payload[2] << 8) |
+		(uint32_t)(unsigned char)payload[3];
+
+	printf("Received KexDhInit message with mpint of length: %d\n", mpintLength);
+	INT64 mpint = 0;
+}
+
 unsigned __stdcall HandleClientConnection(void* arg) {
 	SOCKET clientSocket = (SOCKET)(uintptr_t)arg;
 	printf("Client handler thread started (socket %llu)\n", (unsigned long long)clientSocket);
@@ -316,10 +327,10 @@ unsigned __stdcall HandleClientConnection(void* arg) {
 	do {
 		iResult = recv(clientSocket, recvbuf, recvbuflen, 0);
 		if (iResult > 0) {
+			printf("Bytes received: %d\n", iResult);
+
 			if (clientSshVersionVerified == false)
 			{
-				printf("Bytes received: %d\n", iResult);
-
 				clientSshVersionVerified = VerifySshVersionDeclaration(recvbuf, iResult);
 				if (clientSshVersionVerified == false)
 				{
@@ -328,7 +339,7 @@ unsigned __stdcall HandleClientConnection(void* arg) {
 					//WSACleanup();
 					return 1;
 				}
-				iSendResult = send(clientSocket, versionDeclaration, iResult, 0);
+				iSendResult = send(clientSocket, versionDeclaration, strlen(versionDeclaration), 0);
 				if (iSendResult == SOCKET_ERROR) {
 					printf("send failed: %d\n", WSAGetLastError());
 					closesocket(clientSocket);
@@ -375,6 +386,8 @@ unsigned __stdcall HandleClientConnection(void* arg) {
 
 				messageType = packet[5];
 
+				printf("Message type: %d\n", messageType);
+
 				Payload* responsePayload = NULL;
 
 				switch (messageType)
@@ -382,7 +395,11 @@ unsigned __stdcall HandleClientConnection(void* arg) {
 					case 20:
 						responsePayload = ParseKexInitPayload((unsigned char*)packet + payloadStartIndex, payloadLength);
 						break;
+					case 30:
+						ParseKexDhInitPayload(packet + 6, payloadLength + 16);
+						break;
 				default:
+					puts("WARN - Received message type is currently not handled, no response will be sent");
 					break;
 				}
 				if (responsePayload == NULL)
@@ -431,6 +448,10 @@ unsigned __stdcall HandleClientConnection(void* arg) {
 					closesocket(clientSocket);
 					return 1;
 				}
+				printf("Sent response to client with message type %d \n", messageType);
+				receivedByteCount = 0;
+				packetLength = NULL;
+				free(responsePacket);
 			}
 		}
 		else if (iResult == 0)
