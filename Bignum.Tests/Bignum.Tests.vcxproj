@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{e01f353a-4091-4aa9-949c-de5312061a81}</ProjectGuid>
-    <RootNamespace>SSHServerLearning</RootNamespace>
+    <ProjectGuid>{5e97833b-03a3-4490-8aea-5735a65b9e3a}</ProjectGuid>
+    <RootNamespace>BignumTests</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -103,6 +103,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <CompileAs>CompileAsC</CompileAs>
+      <AdditionalIncludeDirectories>$(SolutionDir)SSH.Server.Learning;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -124,11 +125,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="bignum.c" />
-    <ClCompile Include="SSH.Server.c" />
+    <ClCompile Include="..\SSH.Server.Learning\bignum.c" />
+    <ClCompile Include="Bignum.Tests.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Bignum.h" />
+    <ClInclude Include="..\SSH.Server.Learning\Bignum.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

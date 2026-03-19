@@ -328,7 +328,7 @@ unsigned __stdcall HandleClientConnection(void* arg) {
 					//WSACleanup();
 					return 1;
 				}
-				iSendResult = send(clientSocket, versionDeclaration, iResult, 0);
+				iSendResult = send(clientSocket, versionDeclaration, strlen(versionDeclaration), 0);
 				if (iSendResult == SOCKET_ERROR) {
 					printf("send failed: %d\n", WSAGetLastError());
 					closesocket(clientSocket);

@@ -15,15 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SSH.Server.c">
+    <ClCompile Include="Bignum.Tests.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="bignum.c">
+    <ClCompile Include="..\SSH.Server.Learning\bignum.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Bignum.h">
+    <ClInclude Include="..\SSH.Server.Learning\Bignum.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
