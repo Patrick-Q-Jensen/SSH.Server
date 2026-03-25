@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,24 +102,131 @@ TEST(test_add_large_numbers) {
 }
 
 // ---- bn_sub ----
-//
-//TEST(test_sub_simple) {
-//    BigNum a, b, result;
-//    bn_from_uint32(&a, 300);
-//    bn_from_uint32(&b, 100);
-//    bn_sub(&result, &a, &b);
-//    assert(result.words[0] == 200);
-//    assert(result.wordCount == 1);
-//}
 
-//TEST(test_sub_equal) {
-//    BigNum a, b, result;
-//    bn_from_uint32(&a, 42);
-//    bn_from_uint32(&b, 42);
-//    bn_sub(&result, &a, &b);
-//    assert(bn_is_zero(&result));
-//}
+TEST(test_sub_simple) {
+    BigNum a, b, result;
+    bn_from_uint32(&a, 300);
+    bn_from_uint32(&b, 100);
+    bn_sub(&result, &a, &b);
+    assert(result.words[0] == 200);
+    assert(result.wordCount == 1);
+}
 
+TEST(test_sub_equal) {
+    BigNum a, b, result;
+    bn_from_uint32(&a, 42);
+    bn_from_uint32(&b, 42);
+    bn_sub(&result, &a, &b);
+    assert(bn_is_zero(&result));
+}
+
+// ---- bn_mul ----
+
+TEST(test_mul_simple) {
+    // 3 * 7 = 21
+    bn_from_uint32(&a, 3);
+    bn_from_uint32(&b, 7);
+    bn_mul(&result, &a, &b);
+    assert(result.wordCount == 1);
+    assert(result.words[0] == 21);
+}
+
+TEST(test_mul_by_zero) {
+    bn_from_uint32(&a, 12345);
+    bn_from_uint32(&b, 0);
+    bn_mul(&result, &a, &b);
+    assert(bn_is_zero(&result));
+}
+
+TEST(test_mul_by_one) {
+    bn_from_uint32(&a, 0xDEADBEEF);
+    bn_from_uint32(&b, 1);
+    bn_mul(&result, &a, &b);
+    assert(result.wordCount == 1);
+    assert(result.words[0] == 0xDEADBEEF);
+}
+
+TEST(test_mul_overflow_to_two_words) {
+    // 0xFFFFFFFF * 0xFFFFFFFF = 0xFFFFFFFE00000001
+    bn_from_uint32(&a, 0xFFFFFFFF);
+    bn_from_uint32(&b, 0xFFFFFFFF);
+    bn_mul(&result, &a, &b);
+    assert(result.wordCount == 2);
+    assert(result.words[0] == 0x00000001);
+    assert(result.words[1] == 0xFFFFFFFE);
+}
+
+TEST(test_mul_known_value) {
+    // 0x10000 * 0x10000 = 0x100000000 (crosses into second word)
+    bn_from_uint32(&a, 0x10000);
+    bn_from_uint32(&b, 0x10000);
+    bn_mul(&result, &a, &b);
+    assert(result.wordCount == 2);
+    assert(result.words[0] == 0x00000000);
+    assert(result.words[1] == 0x00000001);
+}
+
+TEST(test_mul_multi_word) {
+    // (2^32 + 1) * 2 = 2^33 + 2 = 0x0000000200000002
+    unsigned char data[] = { 0x01, 0x00, 0x00, 0x00, 0x01 }; // 0x100000001
+    bn_from_bytes(&a, data, sizeof(data));
+    bn_from_uint32(&b, 2);
+    bn_mul(&result, &a, &b);
+    assert(result.wordCount == 2);
+    assert(result.words[0] == 0x00000002);
+    assert(result.words[1] == 0x00000002);
+}
+
+// ---- bn_bit_length ----
+
+TEST(test_bit_length_zero) {
+    bn_from_uint32(&a, 0);
+    assert(bn_bit_length(&a) == 0);
+}
+
+TEST(test_bit_length_one) {
+    // 0x01 = 1 bit
+    bn_from_uint32(&a, 1);
+    assert(bn_bit_length(&a) == 1);
+}
+
+TEST(test_bit_length_byte_boundary) {
+    // 0xFF = 8 bits
+    bn_from_uint32(&a, 0xFF);
+    assert(bn_bit_length(&a) == 8);
+}
+
+TEST(test_bit_length_just_over_byte) {
+    // 0x100 = 9 bits
+    bn_from_uint32(&a, 0x100);
+    assert(bn_bit_length(&a) == 9);
+}
+
+TEST(test_bit_length_full_word) {
+    // 0x80000000 = 32 bits
+    bn_from_uint32(&a, 0x80000000);
+    assert(bn_bit_length(&a) == 32);
+}
+
+TEST(test_bit_length_max_word) {
+    // 0xFFFFFFFF = 32 bits
+    bn_from_uint32(&a, 0xFFFFFFFF);
+    assert(bn_bit_length(&a) == 32);
+}
+
+TEST(test_bit_length_two_words) {
+    // 0x100000000 = 33 bits (just crosses into second word)
+    unsigned char data[] = { 0x01, 0x00, 0x00, 0x00, 0x00 };
+    bn_from_bytes(&a, data, sizeof(data));
+    assert(bn_bit_length(&a) == 33);
+}
+
+TEST(test_bit_length_two_words_large) {
+    // 0x0001FFFFFFFE → top word is 0x0001 = 1 bit + 32 = 33 bits
+    unsigned char data[] = { 0x01, 0xFF, 0xFF, 0xFF, 0xFE };
+    bn_from_bytes(&a, data, sizeof(data));
+    assert(bn_bit_length(&a) == 33);
+}
 
 // ---- bn_from_bytes / bn_to_bytes ----
 
@@ -178,8 +285,22 @@ int main(void) {
     RUN_TEST(test_add_simple);
     RUN_TEST(test_add_with_carry);
     RUN_TEST(test_add_large_numbers);
-    //RUN_TEST(test_sub_simple);
-    //RUN_TEST(test_sub_equal);
+    RUN_TEST(test_sub_simple);
+    RUN_TEST(test_sub_equal);
+    RUN_TEST(test_mul_simple);
+    RUN_TEST(test_mul_by_zero);
+    RUN_TEST(test_mul_by_one);
+    RUN_TEST(test_mul_overflow_to_two_words);
+    RUN_TEST(test_mul_known_value);
+    RUN_TEST(test_mul_multi_word);
+    RUN_TEST(test_bit_length_zero);
+    RUN_TEST(test_bit_length_one);
+    RUN_TEST(test_bit_length_byte_boundary);
+    RUN_TEST(test_bit_length_just_over_byte);
+    RUN_TEST(test_bit_length_full_word);
+    RUN_TEST(test_bit_length_max_word);
+    RUN_TEST(test_bit_length_two_words);
+    RUN_TEST(test_bit_length_two_words_large);
     RUN_TEST(test_from_bytes_single_word);
     RUN_TEST(test_from_bytes_two_words);
     RUN_TEST(test_from_bytes_skips_leading_zeros);

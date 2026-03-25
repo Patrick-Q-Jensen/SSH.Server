@@ -93,7 +93,102 @@ void bn_add(BigNum* result, const BigNum* a, const BigNum* b) {
 }
 
 void bn_sub(BigNum* result, const BigNum* a, const BigNum* b) {
-	
+	bn_init(result);
+	uint64_t borrow = 0;
+	for (int i = 0; i < a->wordCount; i++)
+	{
+		uint64_t res = (uint64_t)a->words[i];
+		uint64_t bWord = (i < b->wordCount) ? b->words[i] : 0;
+
+		res -= borrow; // subtract any borrow from the previous word
+		borrow = 0; // reset borrow for this iteration
+
+		// if the a word is less than the corresponding b word, we need to borrow from the next word
+		if (a->words[i] < b->words[i])
+		{
+			borrow = 1;
+			res += 0x100000000; // add 2^32 to the current word to borrow
+			res -= bWord; // subtract the b word from the current word
+		}
+		else
+		{
+			res -= bWord; // if no borrow is needed, just subtract the b word from the current word
+		}
+
+		result->words[i] = (uint32_t)(res & 0xFFFFFFFF); // store the result in the current word
+		result->wordCount = i + 1; // update the word count
+	}
+
+	// Trim leading zero words
+	while (result->wordCount > 0 && result->words[result->wordCount - 1] == 0) {
+		result->wordCount--;
+	}
+}
+
+void bn_mul(BigNum* result, const BigNum* a, const BigNum* b) {
+	bn_init(result);
+	for (int i = 0; i < a->wordCount; i++) {
+		uint32_t carry = 0;
+		for (int j = 0; j < b->wordCount; j++) {
+			uint64_t product = (uint64_t)a->words[i] * (uint64_t)b->words[j]
+				+ result->words[i + j]
+				+ carry;
+			result->words[i + j] = (uint32_t)(product & 0xFFFFFFFF);
+			carry = (uint32_t)(product >> 32);
+		}
+		// Leftover carry after inner loop ends
+		if (carry && (i + b->wordCount) < BIGNUM_MAX_SIZE) {
+			result->words[i + b->wordCount] += carry;
+		}
+	}
+
+	// Set wordCount to the maximum possible, then trim
+	result->wordCount = a->wordCount + b->wordCount;
+	if (result->wordCount > BIGNUM_MAX_SIZE) {
+		result->wordCount = BIGNUM_MAX_SIZE;
+	}
+	while (result->wordCount > 0 && result->words[result->wordCount - 1] == 0) {
+		result->wordCount--;
+	}
+}
+
+void bn_div_mod(BigNum* quotient, BigNum* remainder, const BigNum* a, const BigNum* b) {
+	bn_init(quotient);
+	bn_init(remainder);
+
+
+}
+
+int bn_bit_length(const BigNum* n) {
+	if (bn_is_zero(n)) return 0;
+	uint32_t topWord = n->words[n->wordCount - 1];
+	int rightShiftCount = 0;
+	while (topWord != 0)
+	{
+		topWord = topWord >> 1;
+		rightShiftCount++;
+	}
+	return (n->wordCount - 1) * 32 + rightShiftCount;
+}
+
+void bn_shift_left(BigNum* n, int bits) {
+	while (bits >= 32)
+	{
+		n->wordCount += 1;
+		for (int i = n->wordCount - 1; i > 0; i--)
+		{
+			n->words[i] = n->words[i - 1];
+		}
+		bits -= 32;
+	}
+	while (bits > 0)
+	{
+		for (int i = n->wordCount - 1; i < 0; i--)
+		{
+			int test = n->words[i] >> bits;
+		}
+	}
+
 }
 
 char* bn_print_hex(const BigNum* n) {
